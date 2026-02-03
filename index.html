@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>¿San Valentín conmigo?</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root{
+      --bg1:#0b0f19;
+      --bg2:#121a2a;
+      --card:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.14);
+      --text:#eaf0ff;
+      --muted:#b9c4de;
+      --accent:#ff4d6d;
+      --accent2:#ff8fab;
+      --ok:#22c55e;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(255,77,109,.18), transparent 60%),
+        radial-gradient(800px 500px at 80% 20%, rgba(255,143,171,.14), transparent 60%),
+        radial-gradient(900px 700px at 60% 90%, rgba(120,160,255,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+    canvas{ position:fixed; inset:0; z-index:0; opacity:.75; }
+
+    /* FULL LAYOUT */
+    .wrap{
+      position:relative;
+      z-index:1;
+      min-height:100vh;
+      height:100vh;
+      padding:24px;        /* cambia a 16px o 0px si quieres más “full” */
+      display:flex;
+    }
+    .card{
+      flex:1;
+      width:100%;
+      height:calc(100vh - 48px); /* 24px arriba + 24px abajo */
+      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border:1px solid var(--border);
+      border-radius:28px;
+      padding:28px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      overflow:auto;
+    }
+
+    .badge{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,77,109,.12);
+      border:1px solid rgba(255,77,109,.25);
+      color:var(--accent2);
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:.9rem;
+    }
+    .title{
+      margin:14px 0 8px;
+      font-size:clamp(1.6rem, 4vw, 2.3rem);
+      line-height:1.15;
+    }
+    .subtitle{
+      margin:0 0 18px;
+      color:var(--muted);
+      font-size:1.02rem;
+      line-height:1.6;
+    }
+    .note{
+      margin-top:14px;
+      color:rgba(255,255,255,.68);
+      font-size:.95rem;
+      line-height:1.55;
+    }
+    .divider{
+      height:1px;
+      background:rgba(255,255,255,.12);
+      margin:18px 0;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap:24px;
+      height:auto;
+    }
+    @media (max-width: 760px){
+      .grid{ grid-template-columns:1fr; }
+      .card{ height:auto; }
+      .wrap{ height:auto; }
+      body{ overflow:auto; }
+    }
+
+    .box{
+      background:rgba(0,0,0,.16);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:20px;
+      padding:20px;
+    }
+    .label{
+      color:rgba(255,255,255,.72);
+      font-weight:700;
+      font-size:.9rem;
+      margin-bottom:8px;
+    }
+    .big{
+      font-size:1.2rem;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    /* PLAYGROUND */
+    .actions{
+      position:relative;
+      margin-top:18px;
+      height:280px; /* más grande */
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px dashed rgba(255,255,255,.12);
+      overflow:hidden;
+    }
+
+    button{
+    width:auto;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.08);
+    color:var(--text);
+    padding:12px 16px;
+    border-radius:14px;
+    font-weight:800;
+    cursor:pointer;
+    transition:transform .12s ease, background .12s ease, border-color .12s ease;
+    user-select:none;
+    font-size:1rem;
+}
+
+    button:hover{ transform: translateY(-1px); border-color:rgba(255,255,255,.24); }
+
+    .yes{
+      position:absolute;
+      left:24px;
+      bottom:24px;
+      background:linear-gradient(90deg, rgba(255,77,109,.88), rgba(255,143,171,.80));
+      border-color: rgba(255,77,109,.55);
+      color:#0b0f19;
+    }
+    .yes:hover{ transform: translateY(-1px) scale(1.01); }
+
+    .no{
+    position:absolute;
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:5;
+      padding:24px;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+    }
+    .modal.show{ display:flex; }
+    .modal-card{
+      width:min(640px, 92vw);
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:0 20px 70px rgba(0,0,0,.45);
+      padding:26px;
+      position:relative;
+      overflow:hidden;
+    }
+    .modal-card::before{
+      content:"";
+      position:absolute;
+      inset:-80px;
+      background: radial-gradient(circle at 30% 20%, rgba(255,77,109,.22), transparent 55%),
+                  radial-gradient(circle at 75% 30%, rgba(255,143,171,.18), transparent 55%);
+      pointer-events:none;
+    }
+    .modal-inner{ position:relative; z-index:1; }
+    .okline{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-weight:900;
+      color:rgba(255,255,255,.92);
+      font-size:1.2rem;
+      margin-bottom:10px;
+    }
+    .heart{
+      width:14px; height:14px;
+      transform: rotate(45deg);
+      background:var(--accent);
+      position:relative;
+      border-radius:2px;
+    }
+    .heart:before, .heart:after{
+      content:"";
+      position:absolute;
+      width:14px; height:14px;
+      background:var(--accent);
+      border-radius:50%;
+    }
+    .heart:before{ left:-7px; top:0; }
+    .heart:after{ left:0; top:-7px; }
+    .modal-title{
+      font-size:clamp(1.5rem, 4vw, 2.2rem);
+      margin:0 0 8px;
+      line-height:1.15;
+    }
+    .modal-text{
+      margin:0;
+      color:rgba(255,255,255,.82);
+      line-height:1.7;
+      font-size:1.02rem;
+    }
+    .close{
+      margin-top:18px;
+      background:rgba(0,0,0,.20);
+    }
+
+    /* Confetti */
+    .confetti{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:6;
+      display:none;
+    }
+    .confetti.show{ display:block; }
+  </style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="badge">💌 San Valentín</div>
+      <h1 class="title" id="title">¿Quieres ser mi San Valentín?</h1>
+      <p class="subtitle" id="subtitle">
+        Prometo una cita bonita, risas y cero excusas. Solo dime la verdad 😄
+      </p>
+
+      <div class="grid">
+        <div class="box">
+          <div class="label">Mensaje</div>
+          <div class="big" id="msg">No necesitaba una excusa, pero me apetecía hacerlo diferente.Porque contigo, incluso lo sencillo se vuelve especial.</div>
+          <div class="note" id="footerNote">— <span id="from">De tu niño pechiocho</span></div>
+        </div>
+
+        <div class="box">
+          <div class="label">Detalles</div>
+          <div class="note">
+            <div><b>Para:</b> <span id="to">Pelasito de queso</span></div>
+            <div><b>Fecha:</b> <span id="date">14 de febrero</span></div>
+            <div><b>Plan:</b> <span id="plan">cena + paseo</span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="label">Decisión</div>
+
+          <div class="actions" id="actions">
+            <button class="yes" id="yesBtn">Sí 💗</button>
+            <button class="no" id="noBtn">No 😅</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="note" style="margin-top:18px">
+        Tip: puedes personalizar esto con la URL, por ejemplo:
+        <span style="color:rgba(255,255,255,.85); font-weight:800;">
+          ?to=Laura&from=Gabriel&plan=Cena%20y%20paseo
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <div class="modal-inner">
+        <div class="okline"><span class="heart"></span> Confirmado</div>
+        <h2 class="modal-title" id="modalTitle">¡Sabía que dirías que sí! 🥰</h2>
+        <p class="modal-text" id="modalText">
+          Entonces queda pactado: <b><span id="modalPlan">cena + paseo</span></b> el <b><span id="modalDate">14 de febrero</span></b>.
+          Te escribo y lo cerramos como gente seria (pero felices).
+        </p>
+        <button class="close" id="closeBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas class="confetti" id="confetti"></canvas>
+
+  <script>
+    // Helpers: URL params
+    function getParam(name, fallback){
+      const v = new URLSearchParams(window.location.search).get(name);
+      return (v && v.trim().length) ? v : fallback;
+    }
+
+    // Content injection (defaults = TU mensaje)
+    const to = getParam("to", "Pelasito de queso");
+    const from = getParam("from", "De tu niño pechiocho");
+    const date = getParam("date", "14 de febrero");
+    const plan = getParam("plan", "Cenar fuera y recordarte todo lo que te amo");
+    const msg = getParam(
+    "msg",
+    "No necesitaba una excusa, pero me apetecía hacerlo diferente.\nPorque contigo, incluso lo sencillo se vuelve especial."
+    );
+    const title = getParam("title", "¿Quieres ser mi San Valentín?");
+    const subtitle = getParam("subtitle", "Te amo mucho mi vida, y me encantaría compartir este día especial contigo.");
+
+
+    document.getElementById("to").textContent = to;
+    document.getElementById("from").textContent = from;
+    document.getElementById("date").textContent = date;
+    document.getElementById("plan").textContent = plan;
+    document.getElementById("msg").textContent = msg;
+    document.getElementById("title").textContent = title;
+    document.getElementById("subtitle").textContent = subtitle;
+
+    document.getElementById("modalPlan").textContent = plan;
+    document.getElementById("modalDate").textContent = date;
+
+    // "No" button dodge logic
+    const playground = document.getElementById("actions");
+    const noBtn = document.getElementById("noBtn");
+
+    function moveNoButton(){
+    const r = playground.getBoundingClientRect();
+    const bw = noBtn.offsetWidth;
+    const bh = noBtn.offsetHeight;
+
+    const padding = 12;
+    const x = Math.random() * (r.width - bw - padding * 2) + padding;
+    const y = Math.random() * (r.height - bh - padding * 2) + padding;
+
+    noBtn.style.right = "auto";
+    noBtn.style.bottom = "auto";
+
+    noBtn.style.left = `${x}px`;
+    noBtn.style.top = `${y}px`;
+    }
+
+    noBtn.addEventListener("mouseenter", moveNoButton);
+    noBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      moveNoButton();
+    }, { passive:false });
+
+    // Start with a random position (so it doesn't look "stuck")
+    moveNoButton();
+
+    // YES -> modal + confetti
+    const modal = document.getElementById("modal");
+    const confetti = document.getElementById("confetti");
+    const yesBtn = document.getElementById("yesBtn");
+    const closeBtn = document.getElementById("closeBtn");
+
+    function showModal(){
+      modal.classList.add("show");
+      startConfetti();
+      confetti.classList.add("show");
+    }
+    function hideModal(){
+      modal.classList.remove("show");
+      stopConfetti();
+      confetti.classList.remove("show");
+    }
+
+    yesBtn.addEventListener("click", showModal);
+    closeBtn.addEventListener("click", hideModal);
+    modal.addEventListener("click", (e) => { if(e.target === modal) hideModal(); });
+
+    // Background hearts animation
+    const bg = document.getElementById("bg");
+    const ctx = bg.getContext("2d");
+
+    function resize(){
+      bg.width = window.innerWidth * devicePixelRatio;
+      bg.height = window.innerHeight * devicePixelRatio;
+      bg.style.width = window.innerWidth + "px";
+      bg.style.height = window.innerHeight + "px";
+      ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    }
+    window.addEventListener("resize", resize);
+
+    const hearts = [];
+    function spawnHeart(){
+      const s = Math.random()*10 + 8;
+      hearts.push({
+        x: Math.random()*window.innerWidth,
+        y: window.innerHeight + 30,
+        size: s,
+        speed: Math.random()*0.8 + 0.6,
+        drift: (Math.random()*2 - 1) * 0.4,
+        rot: Math.random()*Math.PI,
+        rotSpd: (Math.random()*2 - 1) * 0.01,
+        alpha: Math.random()*0.35 + 0.15
+      });
+    }
+
+    function drawHeart(x,y,size,rot,a){
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(rot);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = "rgba(255,77,109,1)";
+      ctx.beginPath();
+      const s = size;
+      ctx.moveTo(0, s*0.35);
+      ctx.bezierCurveTo(0, 0, -s, 0, -s, s*0.55);
+      ctx.bezierCurveTo(-s, s, 0, s*1.2, 0, s*1.45);
+      ctx.bezierCurveTo(0, s*1.2, s, s, s, s*0.55);
+      ctx.bezierCurveTo(s, 0, 0, 0, 0, s*0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function tick(){
+      ctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+
+      if (hearts.length < 70 && Math.random() < 0.45) spawnHeart();
+
+      for(let i=hearts.length-1; i>=0; i--){
+        const h = hearts[i];
+        h.y -= h.speed;
+        h.x += h.drift;
+        h.rot += h.rotSpd;
+
+        drawHeart(h.x, h.y, h.size, h.rot, h.alpha);
+
+        if(h.y < -60) hearts.splice(i,1);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    resize();
+    tick();
+
+    // Confetti
+    const cctx = confetti.getContext("2d");
+    let confettiPieces = [];
+    let confettiRunning = false;
+    let confettiRaf = null;
+
+    function resizeConfetti(){
+      confetti.width = window.innerWidth * devicePixelRatio;
+      confetti.height = window.innerHeight * devicePixelRatio;
+      confetti.style.width = window.innerWidth + "px";
+      confetti.style.height = window.innerHeight + "px";
+      cctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    }
+    window.addEventListener("resize", resizeConfetti);
+    resizeConfetti();
+
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+
+    function startConfetti(){
+      confettiRunning = true;
+      confettiPieces = [];
+      const n = 160;
+
+      for(let i=0;i<n;i++){
+        confettiPieces.push({
+          x: Math.random()*window.innerWidth,
+          y: -20 - Math.random()*window.innerHeight*0.2,
+          w: Math.random()*8 + 4,
+          h: Math.random()*10 + 6,
+          vx: (Math.random()*2 - 1) * 1.4,
+          vy: Math.random()*2 + 2.2,
+          rot: Math.random()*Math.PI,
+          vr: (Math.random()*2 - 1) * 0.08,
+          a: Math.random()*0.5 + 0.45,
+          col: rand([
+            "rgba(255,77,109,1)",
+            "rgba(255,143,171,1)",
+            "rgba(234,179,8,1)",
+            "rgba(120,160,255,1)",
+            "rgba(34,197,94,1)"
+          ])
+        });
+      }
+
+      function loop(){
+        if(!confettiRunning) return;
+        cctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+
+        for(const p of confettiPieces){
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vr;
+          p.vy += 0.01;
+
+          cctx.save();
+          cctx.translate(p.x,p.y);
+          cctx.rotate(p.rot);
+          cctx.globalAlpha = p.a;
+          cctx.fillStyle = p.col;
+          cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+          cctx.restore();
+        }
+
+        confettiRaf = requestAnimationFrame(loop);
+      }
+      loop();
+
+      setTimeout(() => {
+        stopConfetti();
+        confetti.classList.remove("show");
+      }, 2600);
+    }
+
+    function stopConfetti(){
+      confettiRunning = false;
+      if(confettiRaf) cancelAnimationFrame(confettiRaf);
+      confettiRaf = null;
+      cctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+    }
+  </script>
+</body>
+</html>
